@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="DnsClient" Version="1.8.0" />
+    <PackageReference Include="PublishAotCross" Version="1.0.0" />
   </ItemGroup>
 
 </Project>
