@@ -10,17 +10,19 @@ namespace TLSSniffProxy
     {
         private readonly int ListenPort;
         private readonly int TargetPort;
+        private readonly string FallbackHostname;
         private readonly LookupClient? DnsClient;
         private const int MaxClientHelloSize = 4096;
 
-        public TLSSniffProxy(int listenPort, int targetPort, IPEndPoint? dnsServer)
+        public TLSSniffProxy(int listenPort, int targetPort, IPEndPoint? dnsServer, string fallbackHostname)
         {
             ListenPort = listenPort;
             TargetPort = targetPort;
             if (dnsServer != null)
-            { 
+            {
                 DnsClient = new LookupClient(dnsServer);
             }
+            FallbackHostname = fallbackHostname;
         }
 
         public async Task Start()
@@ -59,6 +61,19 @@ namespace TLSSniffProxy
                     if (string.IsNullOrEmpty(error) && !string.IsNullOrEmpty(hostname))
                     {
                         Console.WriteLine($"Detected SNI: {hostname}");
+                    }
+                    else if (!string.IsNullOrEmpty(FallbackHostname))
+                    {
+                        hostname = FallbackHostname;
+                        Console.WriteLine($"No SNI detected, {error ?? "Unknown error"}, Fallback SNI: {hostname}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"No SNI detected: {error ?? "Unknown error"}");
+                    }
+
+                    if (!string.IsNullOrEmpty(hostname))
+                    {
                         try
                         {
                             IPAddress[]? ips;
@@ -84,7 +99,7 @@ namespace TLSSniffProxy
                     }
                     else
                     {
-                        Console.WriteLine($"No SNI detected: {error ?? "Unknown error"}");
+                        // Console.WriteLine($"No SNI detected: {error ?? "Unknown error"}");
                     }
 
                     // 如果没有有效的目标地址，则关闭连接
@@ -105,7 +120,7 @@ namespace TLSSniffProxy
                     // 双向流量转发
                     var clientToTarget = CopyStreamAsync(clientStream, targetStream);
                     var targetToClient = CopyStreamAsync(targetStream, clientStream);
-                    await Task.WhenAny(clientToTarget, targetToClient);
+                    await Task.WhenAll(clientToTarget, targetToClient);
                     client.Close();
                     targetClient.Close();
                 }
@@ -172,7 +187,7 @@ namespace TLSSniffProxy
         {
             if (args.Length < 2)
             {
-                Console.Error.WriteLine("TLSSniffProxy <Listen Port> <Target Port> [DNS Server (IP:Port)]");
+                Console.Error.WriteLine("TLSSniffProxy <Listen Port> <Target Port> [DNS Server (IP:Port)] [Fallback Hostname]");
             }
             try
             {
@@ -186,7 +201,8 @@ namespace TLSSniffProxy
                         Console.WriteLine($"Listen Port: {listenPort}");
                         Console.WriteLine($"Target Port: {targetPort}");
                         IPEndPoint? dnsServer = null;
-                        if (args.Length >= 3) {
+                        if (args.Length >= 3)
+                        {
                             if (!IPEndPoint.TryParse(args[2], out dnsServer))
                             {
                                 Console.Error.WriteLine("DNS Server formant error, use system DNS");
@@ -196,7 +212,13 @@ namespace TLSSniffProxy
                                 Console.WriteLine($"DNS Server: {dnsServer}");
                             }
                         }
-                        var proxy = new TLSSniffProxy(listenPort, targetPort, dnsServer);
+                        string fallbackHostname = String.Empty;
+                        if (args.Length >= 4)
+                        {
+                            fallbackHostname = args[3];
+                            Console.WriteLine($"Fallback Hostname: {fallbackHostname}");
+                        }
+                        var proxy = new TLSSniffProxy(listenPort, targetPort, dnsServer, fallbackHostname);
                         await proxy.Start();
                     }
                     else
