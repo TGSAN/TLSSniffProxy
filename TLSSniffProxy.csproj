@@ -8,7 +8,7 @@
 		<PublishAot>true</PublishAot>
 		<InvariantGlobalization>true</InvariantGlobalization>
 		<AssemblyName>tls-sniff-proxy-$(RuntimeIdentifier)</AssemblyName>
-		<PublishDir>bin\publish\$(RuntimeIdentifier)</PublishDir>
+		<PublishDir>bin\publish</PublishDir>
 	</PropertyGroup>
 
 	<ItemGroup>
