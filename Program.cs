@@ -188,6 +188,7 @@ namespace TLSSniffProxy
             if (args.Length < 2)
             {
                 Console.Error.WriteLine("TLSSniffProxy <Listen Port> <Target Port> [DNS Server (IP:Port)] [Fallback Hostname]");
+                return;
             }
             try
             {
